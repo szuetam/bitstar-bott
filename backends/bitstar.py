@@ -6,6 +6,7 @@ import hmac
 import json
 import logging
 import logging.config
+import signal
 import random
 import time
 
@@ -31,6 +32,7 @@ class BitstarClient(BaseClient):
     NETLOC = 'www.bitstar.pl'
 
     def __init__(self, key=None, secret=None, account_no=None):
+        super().__init__()
         credentials = [account_no, key, secret]
         assert all(credentials) or not any(credentials)
         self.nonce = int(time.time())
@@ -133,6 +135,7 @@ class Worker:
 
         while not self.should_stop:
             try:
+                print(IOLoop.instance()._callbacks)
                 result = yield self.work()
             except Exception as e:
                 result = None
@@ -152,6 +155,7 @@ class Worker:
                 return result
             else:
                 yield self.sleep()
+            print(IOLoop.instance()._callbacks)
 
     def stop(self):
         self.log.info('stopping')
@@ -219,7 +223,8 @@ class OfferCleanerWatcher(Worker):
         open_orders = yield Task(bbackend.open_orders)
         # self.log.debug('Cancelling open orders: %s', open_orders)
         for order in open_orders['result']:
-            cancel_id = order['id'].split(':')[1]
+            # cancel_id = order['id'].split(':')[1]
+            cancel_id = order['id']
             self.log.debug('Cancelling order with id %s: %s', cancel_id, order)
             cancel_result = yield Task(bbackend.cancel_order, cancel_id)
             while cancel_result['status'] != 'ok':
@@ -233,7 +238,6 @@ class Trader(Worker):
     @coroutine
     def is_order_done(self, order_id):
         order_status = yield Task(bbackend.order_status, order_id)
-        print(order_status)
         order_status = json.loads(order_status)
         if order_status[order_id]['status'] in ('done', 'rejected',):
             return True
@@ -314,12 +318,21 @@ def main_loop():
     yield [worker.run_forever() for worker in workers]
 
 
+@coroutine
+def cancel_offers_and_exit():
+    cleaner = OfferCleanerWatcher()
+    log.info('Received ^C cleaning active offers and exitting')
+    yield cleaner.run_once()
+    IOLoop.instance().stop()
+    log.info('Ioloop stopped. Bye')
+
+
 def main():
-    try:
-        IOLoop.instance().set_blocking_log_threshold(0.2)
-        IOLoop.instance().run_sync(main_loop)
-    except KeyboardInterrupt:
-        log.info('^C, quitting.')
+    ioloop = IOLoop.instance()
+    ioloop.set_blocking_log_threshold(0.2)
+    signal.signal(signal.SIGINT, lambda signum, stack: ioloop.add_callback_from_signal(cancel_offers_and_exit))
+    ioloop.instance().run_sync(main_loop)
+
 
 if __name__ == '__main__':
     log.info('*** main() ***')

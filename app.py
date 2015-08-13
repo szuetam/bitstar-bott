@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import logging.config
+import signal
 
 from tornado.gen import coroutine
 from tornado.ioloop import IOLoop
@@ -17,6 +18,7 @@ log.setLevel('DEBUG')
 def main_loop():
     log.info('starting main loop')
     workers = [BalanceWatcher(), OrderBookWatcher(), Trader(), OfferCleanerWatcher()]
+    #workers = [BalanceWatcher(), OfferCleanerWatcher()]
 
     for worker in workers:
         yield worker.run_once()
@@ -24,12 +26,20 @@ def main_loop():
     yield [worker.run_forever() for worker in workers]
 
 
+@coroutine
+def cancel_offers_and_exit():
+    print('Received ^C cleaning active offers and exitting')
+    cleaner = OfferCleanerWatcher()
+    yield cleaner.run_once()
+    IOLoop.instance().stop()
+    print('Ioloop stopped. Bye')
+
+
 def main():
-    try:
-        IOLoop.instance().set_blocking_log_threshold(0.1)
-        IOLoop.instance().run_sync(main_loop)
-    except KeyboardInterrupt:
-        log.info('^C, quitting.')
+    ioloop = IOLoop.instance()
+    ioloop.set_blocking_log_threshold(0.2)
+    signal.signal(signal.SIGINT, lambda signum, stack: ioloop.add_callback_from_signal(cancel_offers_and_exit))
+    ioloop.instance().run_sync(main_loop)
 
 if __name__ == '__main__':
     log.info('*** main() ***')
