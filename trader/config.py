@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-BASE_DIR = os.path.dirname(__file__)
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 KEY = '7181723051:Cbv95T8JwX0a5n8Zs7e4UHiJ1Ssu9f4KwF3I'
 SECRET = 'X3eNwt5Eu89TyLf95oq6YGM8f93FB45OpVxg'

@@ -8,7 +8,7 @@ from tornado.gen import coroutine
 from tornado.ioloop import IOLoop
 
 from config import LOGGING
-from backends.bitstar import BalanceWatcher, OrderBookWatcher, Trader, OfferCleanerWatcher
+from backends.bitstar import BalanceWatcher, OrderBookWatcher, Trader, OfferCleanerWatcher, Monitoring
 
 log = logging.getLogger(__name__)
 logging.config.dictConfig(LOGGING)
@@ -17,7 +17,7 @@ log.setLevel('DEBUG')
 @coroutine
 def main_loop():
     log.info('starting main loop')
-    workers = [BalanceWatcher(), OrderBookWatcher(), Trader(), OfferCleanerWatcher()]
+    workers = [Monitoring(), BalanceWatcher(), OrderBookWatcher(), Trader(), OfferCleanerWatcher()]
     #workers = [BalanceWatcher(), OfferCleanerWatcher()]
 
     for worker in workers:

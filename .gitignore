@@ -1,0 +1,14 @@
+db.sqlite3
+*.un~
+*.py[co]
+*.swp
+bitstar/settings_local.py
+*.swo
+*.*~
+*.swn
+.ropeproject
+*.rdb
+.hgignore
+.idea/
+.hg/
+niefek_changes_not_commited/

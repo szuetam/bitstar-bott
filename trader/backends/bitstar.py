@@ -190,8 +190,18 @@ class Worker:
         self.log.debug('woken up')
 
 
+class Monitoring(Worker):
+    """Broadcasts beacon packets to indicate the backend is alive."""
+
+    timeout = 1
+
+    @coroutine
+    def work(self):
+        yield Task(redis_client.publish, 'monitoring', json.dumps({'type': 'beacon', 'source': 'bitstar'}))
+
+
 class BalanceWatcher(Worker):
-    timeout = 3
+    timeout = 10
 
     @staticmethod
     def cback(response):
@@ -203,8 +213,11 @@ class BalanceWatcher(Worker):
         self.log.debug('fetching balance')
         BTC_balance = yield Task(bbackend.get_balance, 'BTC')
         PLN_balance = yield Task(bbackend.get_balance, 'PLN')
-        yield Task(redis_client.set, 'BTC_balance', str(json.dumps(BTC_balance)))
-        yield Task(redis_client.set, 'PLN_balance', str(json.dumps(PLN_balance)))
+        BTC_balance_json = str(json.dumps(BTC_balance))
+        PLN_balance_json = str(json.dumps(PLN_balance))
+        yield Task(redis_client.publish, 'changes', json.dumps({'type': 'balance', 'source': 'bitstar', 'balancePLN': PLN_balance_json, 'balanceBTC': BTC_balance_json}))
+        yield Task(redis_client.set, 'BTC_balance', BTC_balance_json)
+        yield Task(redis_client.set, 'PLN_balance', PLN_balance_json)
         self.log.debug('balance fetched')
 
 
@@ -291,9 +304,9 @@ class Trader(Worker):
         self.log.debug('Should trade: %s', should_trade)
         if should_trade:
             # try:
-            buy_order = yield Task(bbackend.place_order_limit, **{'operation': 'BID', 'amount': 0.001, 'price': buy_price})
+            buy_order = yield Task(bbackend.place_order_limit, **{'operation': 'BID', 'amount': 0.004, 'price': buy_price})
             self.log.debug('Buy order: %s', buy_order)
-            sell_order = yield Task(bbackend.place_order_limit, **{'operation': 'ASK', 'amount': 0.001, 'price': sell_price})
+            sell_order = yield Task(bbackend.place_order_limit, **{'operation': 'ASK', 'amount': 0.004, 'price': sell_price})
             self.log.debug('Sell order: %s', sell_order)
 
         assert sell_price < buy_price

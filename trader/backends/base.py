@@ -120,10 +120,10 @@ class BaseClient(object):
 
         client_class = AsyncHTTPClient if callback else HTTPClient
         client = client_class()
-        print('About to make request')
-        if self.should_throttle():
-            print('Throttled')
-            return self.return_throttled()
+        # print('About to make request')
+        # if self.should_throttle():
+        #     print('Throttled')
+        #     return self.return_throttled()
         if callback:
             return client.fetch(request=request,
                                 callback=lambda resp: callback(self._process_response(resp)))
