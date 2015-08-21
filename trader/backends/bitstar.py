@@ -229,11 +229,15 @@ class OrderBookWatcher(Worker):
         order_book = yield Task(bbackend.order_book)
         yield Task(redis_client.set, 'order_book', str(json.dumps(order_book)))
 
+balance_watcher = BalanceWatcher()
+orderbook_watcher = OrderBookWatcher()
+
 class OfferCleanerWatcher(Worker):
 
     @coroutine
     def work(self):
         open_orders = yield Task(bbackend.open_orders)
+        yield Task(redis_client.publish, 'changes', json.dumps({'type': 'open_orders', 'orders': open_orders}))
         # self.log.debug('Cancelling open orders: %s', open_orders)
         for order in open_orders['result']:
             # cancel_id = order['id'].split(':')[1]
@@ -246,7 +250,7 @@ class OfferCleanerWatcher(Worker):
 
 
 class Trader(Worker):
-    timeout = 60
+    timeout = 40
 
     @coroutine
     def is_order_done(self, order_id):
@@ -265,6 +269,8 @@ class Trader(Worker):
 
     @coroutine
     def work(self):
+        yield balance_watcher.run_once()
+        yield orderbook_watcher.run_once()
         PLN_balance = yield Task(redis_client.get, 'PLN_balance')
         BTC_balance = yield Task(redis_client.get, 'BTC_balance')
 
@@ -304,16 +310,16 @@ class Trader(Worker):
         self.log.debug('Should trade: %s', should_trade)
         if should_trade:
             # try:
-            buy_order = yield Task(bbackend.place_order_limit, **{'operation': 'BID', 'amount': 0.004, 'price': buy_price})
+            buy_order = yield Task(bbackend.place_order_limit, **{'operation': 'BID', 'amount': 0.01, 'price': buy_price})
             self.log.debug('Buy order: %s', buy_order)
-            sell_order = yield Task(bbackend.place_order_limit, **{'operation': 'ASK', 'amount': 0.004, 'price': sell_price})
+            sell_order = yield Task(bbackend.place_order_limit, **{'operation': 'ASK', 'amount': 0.01, 'price': sell_price})
             self.log.debug('Sell order: %s', sell_order)
 
         assert sell_price < buy_price
 
     @coroutine
     def sleep(self):
-        timeout_delta = random.randrange(-30, 31)
+        timeout_delta = random.randrange(-15, 15)
         self.log.debug('sleeping for %d seconds', self.timeout + timeout_delta)
         yield Task(IOLoop.instance().add_timeout,
                    IOLoop.instance().time() + self.timeout + timeout_delta)

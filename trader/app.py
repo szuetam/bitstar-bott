@@ -17,7 +17,7 @@ log.setLevel('DEBUG')
 @coroutine
 def main_loop():
     log.info('starting main loop')
-    workers = [Monitoring(), BalanceWatcher(), OrderBookWatcher(), Trader(), OfferCleanerWatcher()]
+    workers = [Monitoring(), Trader(), OfferCleanerWatcher()]
     #workers = [BalanceWatcher(), OfferCleanerWatcher()]
 
     for worker in workers:

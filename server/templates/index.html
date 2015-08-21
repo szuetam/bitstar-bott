@@ -4,22 +4,30 @@
     <meta charset="UTF-8">
     <title></title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <style>
+        div.live_indicator {
+            height: 15px;
+            width: 15px;
+            background-color: #448800;
+        }
+        div.offline {
+            background-color: #ff0000;
+        }
+        div.possible_offline {
+            background-color: #fdf204;
+        }
+        div.online {
+            background-color: #448800;
+        }
+    </style>
 </head>
 <body>
 <div class="container" id="main"></div>
 <script src="https://code.jquery.com/jquery-1.11.3.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
 <script src="http://cdn.jsdelivr.net/sockjs/0.3/sockjs.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/react.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/react.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.13.3/JSXTransformer.js"></script>
 <script type="text/jsx" src="static/js/app.js"></script>
-<script>
-    (function() {
-        var conn = SockJS(['http://', window.location.host, '/realtime/changes'].join(''));
-        conn.onmessage = function(e) {
-            console.log(e.data);
-        };
-    })();
-</script>
 </body>
 </html>
